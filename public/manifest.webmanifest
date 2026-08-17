@@ -1,0 +1,16 @@
+{
+  "name": "TOMA — doblá la escena",
+  "short_name": "TOMA",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#5C3A1E",
+  "theme_color": "#5C3A1E",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
