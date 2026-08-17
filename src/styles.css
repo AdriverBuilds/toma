@@ -157,9 +157,10 @@ button:focus-visible {
 
 .hero img {
   width: 100%;
+  min-height: 168px;
   height: 100%;
   object-fit: cover;
-  filter: contrast(1.1) saturate(0.8);
+  filter: contrast(1.12) saturate(1.05) brightness(1.18);
 }
 
 .hero-copy {
@@ -255,6 +256,7 @@ button:focus-visible {
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: contrast(1.12) saturate(1.08) brightness(1.22);
 }
 
 .thumb em {
