@@ -19,7 +19,7 @@ import {
 
 type View = 'feed' | 'booth';
 type Phase = 'pick' | 'watch' | 'slate' | 'rec' | 'play';
-type PackFilter = Pack | 'todos';
+type PackFilter = Pack;
 
 function insecureMic(): boolean {
   return typeof window !== 'undefined' && !window.isSecureContext;
@@ -36,11 +36,14 @@ export function App() {
   const waveBuf = useRef(new Uint8Array(2048));
 
   const [view, setView] = useState<View>('feed');
-  const [pack, setPack] = useState<PackFilter>('todos');
+  const [pack, setPack] = useState<PackFilter>('meme');
+  const [dragOver, setDragOver] = useState(false);
   const [phase, setPhase] = useState<Phase>('pick');
   const phaseRef = useRef<Phase>('pick');
   phaseRef.current = phase;
-  const [clip, setClip] = useState<Clip>(STOCK[0]);
+  const [clip, setClip] = useState<Clip>(
+    () => STOCK.find((c) => c.pack === 'meme') ?? STOCK[0],
+  );
   const [challenge, setChallenge] = useState<Challenge>(CHALLENGES[0]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -50,11 +53,7 @@ export function App() {
   const [dur, setDur] = useState(22);
   const [copied, setCopied] = useState(false);
 
-  const filtered = useMemo(
-    () => (pack === 'todos' ? STOCK : STOCK.filter((c) => c.pack === pack)),
-    [pack],
-  );
-  const featured = STOCK[0];
+  const filtered = useMemo(() => STOCK.filter((c) => c.pack === pack), [pack]);
   const timed = lineAt(clip, t);
   const prompt =
     challenge.id !== 'libre' && challenge.hint
@@ -291,7 +290,7 @@ export function App() {
       credit: 'Archivo local',
       src: localUrl.current,
       poster: '',
-      pack: 'hablan',
+      pack: 'meme',
       talks: true,
       prompt: 'Hablá encima. Esta es tu toma.',
       lines: [{ at: 0, text: 'Esta es tu toma.' }],
@@ -308,20 +307,36 @@ export function App() {
             </div>
             <div>
               <h1>TOMA</h1>
-              <p className="kicker">Doblá la cara. Mandalo al grupo.</p>
+              <p className="kicker">Subí el banana. Doblalo. Mandalo.</p>
             </div>
             <button className="plate-btn" onClick={() => fileRef.current?.click()}>
-              Tirá el tuyo
+              Subí el banana
             </button>
           </header>
 
-          <section className="hero" onClick={() => openBooth(featured)}>
-            <img src={featured.poster} alt="" />
+          <section
+            className={dragOver ? 'hero drop on' : 'hero drop'}
+            onClick={() => fileRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f && f.type.startsWith('video/')) onFile(f);
+            }}
+          >
             <div className="hero-copy">
-              <em>hoy en tanda</em>
-              <strong>{featured.title}</strong>
-              <span>{featured.hook}</span>
-              <b>Entrar a doblar</b>
+              <em>el loop</em>
+              <strong>Tirá el banana</strong>
+              <span>
+                O el del grupo, el del TikTok, el que ya tenés. Se queda en el
+                teléfono. La gente dobla eso.
+              </span>
+              <b>Abrir archivo</b>
             </div>
           </section>
 
@@ -351,12 +366,12 @@ export function App() {
             <button className="tape file" onClick={() => fileRef.current?.click()}>
               <span className="thumb plus">+</span>
               <strong>Tu clip</strong>
-              <small>Se queda en el teléfono</small>
+              <small>Banana, el del grupo, el que sea</small>
             </button>
           </section>
 
           <p className="hint foot">
-            Tocá una cara y doblá. El mic no sube a ningún lado.
+            Lo conocido se dobla. El archivo no sube a ningún lado.
           </p>
         </>
       ) : (
