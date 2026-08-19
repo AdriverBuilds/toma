@@ -64,7 +64,7 @@ button:focus-visible {
 .desk-feed {
   display: grid;
   gap: 14px;
-  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-rows: auto auto auto auto 1fr auto;
 }
 
 .desk-booth {
@@ -115,7 +115,14 @@ button:focus-visible {
 }
 
 .desk-feed .kicker {
-  max-width: 22ch;
+  max-width: 28ch;
+}
+
+.tools {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  align-self: center;
 }
 
 .plate,
@@ -148,10 +155,9 @@ button:focus-visible {
   padding: 8px 12px;
 }
 
-.hero {
+.feature {
   display: grid;
-  grid-template-columns: 42% 1fr;
-  min-height: 168px;
+  grid-template-rows: minmax(180px, 42vw) auto;
   background: #1a1008;
   border: 3px solid #0a0704;
   color: var(--paper);
@@ -159,30 +165,75 @@ button:focus-visible {
   overflow: hidden;
 }
 
-.hero.drop {
-  grid-template-columns: 1fr;
-  min-height: 200px;
-  background-image:
-    linear-gradient(#1a1008, #1a1008),
-    repeating-linear-gradient(
-      135deg,
-      transparent 0 12px,
-      rgba(196, 163, 90, 0.12) 12px 13px
-    );
-  cursor: pointer;
+.feature .shot {
+  position: relative;
+  display: block;
+  min-height: 180px;
+  background: #0a0704;
 }
 
-.hero.drop.on {
-  border-color: var(--air);
-  background: #2a1410;
-}
-
-.hero img {
+.feature .shot img,
+.feature .shot i {
   width: 100%;
-  min-height: 168px;
   height: 100%;
   object-fit: cover;
+  display: block;
   filter: contrast(1.12) saturate(1.05) brightness(1.18);
+}
+
+.feature .shot em {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  font-family: 'Red Hat Mono', monospace;
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--air);
+  color: #f3e7b3;
+  padding: 3px 6px;
+}
+
+.byo {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--laminate);
+  border: 2px solid #1a1008;
+  text-align: left;
+  color: var(--ink);
+}
+
+.byo.on {
+  outline: 3px solid var(--air);
+}
+
+.byo strong {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.03em;
+}
+
+.byo span {
+  grid-column: 1;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.byo em {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-style: normal;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--air);
 }
 
 .hero-copy {
@@ -518,13 +569,12 @@ button:focus-visible {
   .wall {
     grid-template-columns: repeat(4, 1fr);
   }
-  .hero.drop {
-    grid-template-columns: 1fr;
-    min-height: 220px;
+  .feature {
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: 240px;
   }
-  .hero {
-    grid-template-columns: 280px 1fr;
-    min-height: 220px;
+  .feature .shot {
+    min-height: 240px;
   }
   .desk-booth {
     grid-template-columns: 1fr minmax(280px, 360px);
@@ -570,4 +620,80 @@ button:focus-visible {
   .cue {
     transform: none;
   }
+}
+
+.langs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.langs button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(26, 18, 8, 0.35);
+  background: var(--laminate);
+  color: var(--ink);
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.langs button.on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.ops {
+  min-height: 100dvh;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 18px 48px;
+  color: var(--paper);
+  font-family: 'Source Serif 4', Georgia, serif;
+}
+
+.ops h1 {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 56px;
+  line-height: 0.9;
+  margin: 6px 0 12px;
+}
+
+.ops h2 {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 28px;
+  margin: 28px 0 8px;
+}
+
+.ops-kicker,
+.ops-lead,
+.ops p,
+.ops li {
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.ops a {
+  color: var(--brass);
+}
+
+.ops table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.ops th,
+.ops td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(239, 227, 192, 0.2);
+}
+
+.ops code {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 13px;
 }

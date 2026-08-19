@@ -8,14 +8,21 @@ import {
   wait,
 } from './audio';
 import {
-  CHALLENGES,
   PACKS,
-  STOCK,
+  clipsForPack,
   lineAt,
   type Challenge,
   type Clip,
   type Pack,
 } from './clips';
+import {
+  LOCALES,
+  copyFor,
+  detectLocale,
+  persistLocale,
+  type Locale,
+} from './i18n';
+import { track } from './track';
 
 type View = 'feed' | 'booth';
 type Phase = 'pick' | 'watch' | 'slate' | 'rec' | 'play';
@@ -35,6 +42,10 @@ export function App() {
   const localUrl = useRef<string | null>(null);
   const waveBuf = useRef(new Uint8Array(2048));
 
+  const [locale, setLocale] = useState<Locale>(() => detectLocale());
+  const copy = copyFor(locale);
+  const challenges = copy.challenges;
+
   const [view, setView] = useState<View>('feed');
   const [pack, setPack] = useState<PackFilter>('meme');
   const [dragOver, setDragOver] = useState(false);
@@ -42,9 +53,9 @@ export function App() {
   const phaseRef = useRef<Phase>('pick');
   phaseRef.current = phase;
   const [clip, setClip] = useState<Clip>(
-    () => STOCK.find((c) => c.pack === 'meme') ?? STOCK[0],
+    () => clipsForPack('meme', detectLocale())[0],
   );
-  const [challenge, setChallenge] = useState<Challenge>(CHALLENGES[0]);
+  const [challenge, setChallenge] = useState<Challenge>(() => copyFor(detectLocale()).challenges[0]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [slateN, setSlateN] = useState(3);
@@ -53,12 +64,21 @@ export function App() {
   const [dur, setDur] = useState(22);
   const [copied, setCopied] = useState(false);
 
-  const filtered = useMemo(() => STOCK.filter((c) => c.pack === pack), [pack]);
+  const filtered = useMemo(() => clipsForPack(pack, locale), [pack, locale]);
+  const featured = filtered[0];
+  const rest = filtered.slice(1);
   const timed = lineAt(clip, t);
   const prompt =
     challenge.id !== 'libre' && challenge.hint
       ? challenge.hint
       : (timed?.text ?? clip.prompt);
+
+  useEffect(() => {
+    persistLocale(locale);
+    track('locale', { lang: locale });
+    const next = copyFor(locale).challenges;
+    setChallenge((cur) => next.find((c) => c.id === cur.id) ?? next[0]);
+  }, [locale]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -122,7 +142,7 @@ export function App() {
   const ensureMic = async () => {
     if (micRef.current) return true;
     if (insecureMic()) {
-      setError('En el celu el mic pide HTTPS. Entrá por el link de TOMA, no por la IP.');
+      setError(copy.errMicHttp);
       return false;
     }
     try {
@@ -131,7 +151,7 @@ export function App() {
       micRef.current = new BoothMic(ctx, stream);
       return true;
     } catch {
-      setError('Este aparato no tiene mic, o lo bloqueó. Mirá el clip igual.');
+      setError(copy.errMic);
       return false;
     }
   };
@@ -142,6 +162,7 @@ export function App() {
     setError('');
     setPhase('pick');
     setView('booth');
+    track('clip_open', { clip_id: next.id, pack: next.pack });
   };
 
   const toFeed = () => {
@@ -167,6 +188,7 @@ export function App() {
     if (!v) return;
     setError('');
     setPhase('watch');
+    track('watch', { clip_id: clip.id });
     v.loop = false;
     v.muted = false;
     v.volume = 1;
@@ -174,7 +196,7 @@ export function App() {
     try {
       await v.play();
     } catch {
-      setError('Tocá Mirá otra vez para dar sonido.');
+      setError(copy.errSound);
       setPhase('pick');
     }
   };
@@ -187,6 +209,7 @@ export function App() {
     setHasTake(false);
     setError('');
     setPhase('slate');
+    track('dub_start', { clip_id: clip.id, challenge: challenge.id });
     v.pause();
     v.currentTime = 0;
     v.muted = false;
@@ -200,7 +223,7 @@ export function App() {
     try {
       await v.play();
     } catch {
-      setError('Tocá Doblá otra vez.');
+      setError(copy.errDub);
       setPhase('pick');
     }
   };
@@ -212,7 +235,7 @@ export function App() {
     v?.pause();
     const blob = mic.stopTake();
     if (blob.size < 2000) {
-      setError('La toma salió vacía. En este aparato no hay mic, o está muy bajo.');
+      setError(copy.errEmpty);
       setPhase('pick');
       return;
     }
@@ -249,6 +272,7 @@ export function App() {
     if (!v || !takeUrl.current) return;
     setBusy(true);
     setError('');
+    track('share', { clip_id: clip.id });
     try {
       const blob = await exportTake(v, takeUrl.current, dur);
       await shareOrDownload(
@@ -263,7 +287,7 @@ export function App() {
         await shareOrDownload(audioBlob, `toma-${clip.id}.wav`, clip.title);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        setError(err instanceof Error ? err.message : 'No se pudo exportar');
+        setError(err instanceof Error ? err.message : copy.errExport);
       }
     } finally {
       setBusy(false);
@@ -276,26 +300,39 @@ export function App() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
-      setError('No se pudo copiar el link.');
+      setError(copy.errCopy);
     }
   };
 
   const onFile = (file: File) => {
     if (localUrl.current) URL.revokeObjectURL(localUrl.current);
     localUrl.current = URL.createObjectURL(file);
+    track('byo', { kind: file.type });
     openBooth({
       id: 'tuyo',
       title: file.name.replace(/\.[^.]+$/, ''),
-      hook: 'Tu archivo. No se sube.',
+      hook: copy.byoHook,
       credit: 'Archivo local',
       src: localUrl.current,
       poster: '',
       pack: 'meme',
       talks: true,
-      prompt: 'Hablá encima. Esta es tu toma.',
-      lines: [{ at: 0, text: 'Esta es tu toma.' }],
+      audio: 'any',
+      prompt: copy.byoPrompt,
+      lines: [{ at: 0, text: copy.byoPrompt }],
     });
   };
+
+  const hint =
+    phase === 'pick'
+      ? copy.hintPick
+      : phase === 'watch'
+        ? copy.hintWatch
+        : phase === 'rec'
+          ? copy.hintRec
+          : phase === 'play'
+            ? copy.hintPlay
+            : '';
 
   return (
     <div className={view === 'feed' ? 'desk desk-feed' : 'desk desk-booth'}>
@@ -307,15 +344,43 @@ export function App() {
             </div>
             <div>
               <h1>TOMA</h1>
-              <p className="kicker">Subí el banana. Doblalo. Mandalo.</p>
+              <p className="kicker">{copy.kicker}</p>
             </div>
-            <button className="plate-btn" onClick={() => fileRef.current?.click()}>
-              Subí el banana
-            </button>
+            <div className="tools">
+              <nav className="langs" aria-label="idioma">
+                {LOCALES.map((l) => (
+                  <button
+                    key={l}
+                    className={locale === l ? 'on' : ''}
+                    onClick={() => setLocale(l)}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </nav>
+              <button className="plate-btn" onClick={() => fileRef.current?.click()}>
+                {copy.fileBtn}
+              </button>
+            </div>
           </header>
 
-          <section
-            className={dragOver ? 'hero drop on' : 'hero drop'}
+          {featured && (
+            <button className="feature" onClick={() => openBooth(featured)}>
+              <span className="shot">
+                {featured.poster ? <img src={featured.poster} alt="" /> : <i />}
+                {featured.talks && <em>{copy.talks}</em>}
+              </span>
+              <span className="hero-copy">
+                <em>{copy.scene}</em>
+                <strong>{featured.title}</strong>
+                <span>{featured.hook}</span>
+                <b>{copy.dub}</b>
+              </span>
+            </button>
+          )}
+
+          <button
+            className={dragOver ? 'byo on' : 'byo'}
             onClick={() => fileRef.current?.click()}
             onDragOver={(e) => {
               e.preventDefault();
@@ -329,35 +394,32 @@ export function App() {
               if (f && f.type.startsWith('video/')) onFile(f);
             }}
           >
-            <div className="hero-copy">
-              <em>el loop</em>
-              <strong>Tirá el banana</strong>
-              <span>
-                O el del grupo, el del TikTok, el que ya tenés. Se queda en el
-                teléfono. La gente dobla eso.
-              </span>
-              <b>Abrir archivo</b>
-            </div>
-          </section>
+            <strong>{copy.fileTitle}</strong>
+            <span>{copy.fileBody}</span>
+            <em>{copy.openFile}</em>
+          </button>
 
           <nav className="packs" aria-label="tandas">
             {PACKS.map((p) => (
               <button
                 key={p.id}
                 className={pack === p.id ? 'chip on' : 'chip'}
-                onClick={() => setPack(p.id)}
+                onClick={() => {
+                  setPack(p.id);
+                  track('pack', { pack: p.id });
+                }}
               >
-                {p.label}
+                {copy.packs[p.id] ?? p.label}
               </button>
             ))}
           </nav>
 
           <section className="wall">
-            {filtered.map((s) => (
+            {rest.map((s) => (
               <button key={s.id} className="tape" onClick={() => openBooth(s)}>
                 <span className="thumb">
                   {s.poster ? <img src={s.poster} alt="" /> : <i />}
-                  {s.talks && <em>habla</em>}
+                  {s.talks && <em>{copy.talks}</em>}
                 </span>
                 <strong>{s.title}</strong>
                 <small>{s.hook}</small>
@@ -365,20 +427,18 @@ export function App() {
             ))}
             <button className="tape file" onClick={() => fileRef.current?.click()}>
               <span className="thumb plus">+</span>
-              <strong>Tu clip</strong>
-              <small>Banana, el del grupo, el que sea</small>
+              <strong>{copy.yourClip}</strong>
+              <small>{copy.yourClipSub}</small>
             </button>
           </section>
 
-          <p className="hint foot">
-            Lo conocido se dobla. El archivo no sube a ningún lado.
-          </p>
+          <p className="hint foot">{copy.foot}</p>
         </>
       ) : (
         <>
           <header className="rack">
             <button className="back" onClick={toFeed}>
-              Tanda
+              {copy.booth}
             </button>
             <div>
               <h1>TOMA</h1>
@@ -416,12 +476,14 @@ export function App() {
           </div>
 
           <aside className="cue">
-            <span>{challenge.id === 'libre' ? 'guión' : `modo · ${challenge.label}`}</span>
+            <span>
+              {challenge.id === 'libre' ? copy.cue : `modo · ${challenge.label}`}
+            </span>
             <p>{prompt}</p>
           </aside>
 
           <div className="mods" role="list">
-            {CHALLENGES.map((c) => (
+            {challenges.map((c) => (
               <button
                 key={c.id}
                 className={challenge.id === c.id ? 'mod on' : 'mod'}
@@ -439,17 +501,17 @@ export function App() {
             {phase === 'pick' && (
               <div className="pair">
                 <button className="mira" onClick={() => void watch()}>
-                  Mirá
+                  {copy.watch}
                 </button>
                 <button className="doba" onClick={() => void startSlate()}>
-                  Doblá
+                  {copy.dub}
                 </button>
               </div>
             )}
             {phase === 'watch' && (
               <div className="pair">
                 <button className="mira" onClick={() => setPhase('pick')}>
-                  Atrás
+                  {copy.back}
                 </button>
                 <span className="time">{t.toFixed(1)}s</span>
               </div>
@@ -464,7 +526,7 @@ export function App() {
                     setPhase('pick');
                   }}
                 >
-                  Cortá
+                  {copy.cut}
                 </button>
                 <span className="time recing">REC {t.toFixed(1)}</span>
               </div>
@@ -472,35 +534,25 @@ export function App() {
             {phase === 'play' && (
               <div className="pair">
                 <button className="mira" onClick={toFeed}>
-                  Tanda
+                  {copy.booth}
                 </button>
                 <button className="doba" onClick={() => void startSlate()}>
-                  Otra
+                  {copy.again}
                 </button>
                 <button className="mira" onClick={() => void replay()}>
-                  Play
+                  {copy.play}
                 </button>
                 <button className="doba" disabled={busy || !hasTake} onClick={() => void share()}>
-                  {busy ? 'Armando…' : 'Al grupo'}
+                  {busy ? copy.sharing : copy.share}
                 </button>
               </div>
             )}
             <div className="pair slim">
               <button className="ghost" onClick={() => void copyLink()}>
-                {copied ? 'Link copiado' : 'Copiá el link'}
+                {copied ? copy.copied : copy.copy}
               </button>
             </div>
-            <p className="hint">
-              {phase === 'pick'
-                ? 'Mirá con sonido. Doblá con el mic del celu.'
-                : phase === 'watch'
-                  ? 'Reproducción. El mic no hace falta.'
-                  : phase === 'rec'
-                    ? 'Hablá ahora. El original queda bajito.'
-                    : phase === 'play'
-                      ? 'Mandalo al grupo. El video se arma acá.'
-                      : ''}
-            </p>
+            <p className="hint">{hint}</p>
           </footer>
         </>
       )}

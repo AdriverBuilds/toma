@@ -1,5 +1,6 @@
 {
   "framework": "vite",
+  "rewrites": [{ "source": "/ops", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/clips/(.*)",

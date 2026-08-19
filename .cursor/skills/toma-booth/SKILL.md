@@ -35,7 +35,7 @@ Spanish LATAM, studio tech, short. Tocá / Doblá / Otra toma / Bajate el clip /
 - Portrait-first. Thumb rec. `100dvh` + safe-area.
 - Unlock AudioContext + mic on the first gesture. HTTP localhost (secure context). No self-signed cert.
 - Primary loop: real video, muted, user voice as WAV. Visual countdown, no oscillator beeps.
-- Viral loop is BYO: the banana, the group chat clip, whatever they already have. File never uploads. Lead the feed with that drop.
+- Feed leads with a known face you can dub in one tap. BYO is a second action: “Tu video”, never “banana”. File never uploads.
 - Stock we host: faces people already know that are US public domain (Steamboat Willie 1928, NOTLD, Chaplin, Safety Last, Skeleton Dance 1929, Nosferatu) plus Mixkit **Free** talking heads in a secondary pack. Never Mixkit Restricted. Never host Marvel, Shrek, Simpsons, South Park, Banana Cat, or other in-copyright memes.
 - Do not download or host Marvel, DreamWorks, Shrek, Simpsons, South Park, or other in-copyright shows.
 - Production is HTTPS on Vercel. Phone mic needs a secure context — never tell people to open LAN IP:port.
